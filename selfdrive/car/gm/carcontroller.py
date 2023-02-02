@@ -57,17 +57,27 @@ class CarController:
     sync_steer = (init_lka_counter or out_of_sync) and self.CP.networkLocation == NetworkLocation.fwdCamera
 
     steer_step = self.params.INACTIVE_STEER_STEP
-    if CC.latActive or sync_steer:
+    if CC.latActive:# or sync_steer:
       steer_step = self.params.STEER_STEP
 
     # Avoid GM EPS faults when transmitting messages too close together: skip this transmit if we just received the
     # next Panda loopback confirmation in the current CS frame.
     if CS.loopback_lka_steering_cmd_updated:
-      self.lka_steering_cmd_counter += 1
+      # self.lka_steering_cmd_counter += 1
       self.sent_lka_steering_cmd = True
-    elif (self.frame - self.last_steer_frame) >= steer_step:
+
+    # send_steer = self.frame % 2 < 1  # 50 Hz
+    send_steer = self.frame % 3 < 2  # 67 Hz
+    # send_steer = self.frame % 4 < 3  # 75 Hz
+    # send_steer = self.frame % 5 < 4  # 80 Hz
+    # send_steer = self.frame % 10 < 9  # 90 Hz
+    # send_steer = self.frame % 1 == 0  # 100 Hz
+    if not self.sent_lka_steering_cmd:
+      send_steer = (self.frame - self.last_steer_frame) >= 2
+
+    if send_steer:
       # Initialize ASCMLKASteeringCmd counter using the camera until we get a msg on the bus
-      if init_lka_counter:
+      if not self.sent_lka_steering_cmd:
         self.lka_steering_cmd_counter = CS.pt_lka_steering_cmd_counter + 1
 
       if CC.latActive:
@@ -79,6 +89,7 @@ class CarController:
       self.last_steer_frame = self.frame
       self.apply_steer_last = apply_steer
       idx = self.lka_steering_cmd_counter % 4
+      self.lka_steering_cmd_counter += 1
       can_sends.append(gmcan.create_steering_control(self.packer_pt, CanBus.POWERTRAIN, apply_steer, idx, CC.latActive))
 
     if self.CP.openpilotLongitudinalControl:
