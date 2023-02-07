@@ -236,5 +236,5 @@ class CarInterface(CarInterfaceBase):
 
     return ret
 
-  def apply(self, c):
-    return self.CC.update(c, self.CS)
+  def apply(self, c, remaining):
+    return self.CC.update(c, self.CS, remaining)

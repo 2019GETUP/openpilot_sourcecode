@@ -37,7 +37,7 @@ class CarController:
     self.packer_obj = CANPacker(DBC[self.CP.carFingerprint]['radar'])
     self.packer_ch = CANPacker(DBC[self.CP.carFingerprint]['chassis'])
 
-  def update(self, CC, CS):
+  def update(self, CC, CS, remaining):
     actuators = CC.actuators
     hud_control = CC.hudControl
     hud_alert = hud_control.visualAlert
@@ -62,9 +62,10 @@ class CarController:
 
     # Avoid GM EPS faults when transmitting messages too close together: skip this transmit if we just received the
     # next Panda loopback confirmation in the current CS frame.
-    if CS.loopback_lka_steering_cmd_updated:
-      self.lka_steering_cmd_counter += 1
-      self.sent_lka_steering_cmd = True
+    if CS.loopback_lka_steering_cmd_updated or remaining > -5:
+      if CS.loopback_lka_steering_cmd_updated:
+        self.lka_steering_cmd_counter += 1
+        self.sent_lka_steering_cmd = True
     elif (self.frame - self.last_steer_frame) >= steer_step:
       # Initialize ASCMLKASteeringCmd counter using the camera until we get a msg on the bus
       if init_lka_counter:
